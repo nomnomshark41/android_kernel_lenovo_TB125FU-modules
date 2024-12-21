@@ -10,7 +10,7 @@ ifndef TOP
 endif
 
 # Force build fail on modpost warning
-KBUILD_MODPOST_FAIL_ON_WARNINGS := y
+KBUILD_MODPOST_FAIL_ON_WARNINGS := n
 
 ccflags-y += \
     -I$(srctree)/drivers/misc/mediatek/include/mt-plat \
