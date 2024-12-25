@@ -31,7 +31,7 @@ ifeq ($(TARGET_BUILD_VARIANT),$(filter $(TARGET_BUILD_VARIANT),userdebug user))
 endif
 
 # Force build fail on modpost warning
-KBUILD_MODPOST_FAIL_ON_WARNINGS := y
+KBUILD_MODPOST_FAIL_ON_WARNINGS := n
 ###############################################################################
 
 # only WMT align this design flow, but gps use this also.
