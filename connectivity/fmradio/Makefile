@@ -12,13 +12,8 @@
 #
 
 ###############################################################################
-# Necessary Check
 
-ifeq ($(AUTOCONF_H),)
-    $(error AUTOCONF_H is not defined)
-endif
-
-ccflags-y += -imacros $(AUTOCONF_H)
+ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
 
 ifndef TOP
     TOP := $(srctree)/..
