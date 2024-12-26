@@ -15,8 +15,37 @@
 #define __FM_UTILS_H__
 
 #include <linux/version.h>
+#include <linux/arm-smccc.h> /* for Kernel Native SMC API */
+#include <linux/soc/mediatek/mtk_sip_svc.h> /* for SMC ID table */
+
+#if (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
+#include <linux/device.h>
+#include <linux/pm_wakeup.h>
+#else
+#include <linux/wakelock.h>
+#endif
 
 #include "fm_typedef.h"
+
+enum ENUM_FM_STATUS {
+	FM_STATUS_OK = 0x1111,
+	FM_STATUS_ERR = 0xFFFF
+};
+
+/* OPID for FM ATF */
+enum ENUM_FM_SMC_OPID {
+	SMC_FM_SET_OWN = 1,
+	SMC_FM_CLR_OWN,
+	SMC_FM_PRE_ON,
+	SMC_FM_POST_ON,
+	SMC_FM_PRE_OFF,
+	SMC_FM_POST_OFF,
+	SMC_FM_REG_DUMP,
+	SMC_FM_TOP_CLK_ON,
+	SMC_FM_TOP_CLK_OFF,
+	SMC_FM_SPI_HOPPING_ON,
+	SMC_FM_SPI_HOPPING_OFF
+};
 
 /**
 * Base structure of fm object
@@ -199,6 +228,15 @@ extern signed int fm_flag_event_put(struct fm_flag_event *thiz);
 })
 
 /*
+ * FM wake lock
+ */
+#if (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
+#define FM_WAKE_LOCK_T struct wakeup_source
+#else
+#define FM_WAKE_LOCK_T struct wake_lock
+#endif
+
+/*
  * FM lock mechanism
  */
 struct fm_lock {
@@ -251,7 +289,8 @@ enum fm_timer_ctrl {
 	FM_TIMER_CTRL_MAX
 };
 
-#define FM_TIMER_FLAG_ACTIVATED (1<<0)
+#define FM_TIMER_FLAG_INITED (1<<0)
+#define FM_TIMER_FLAG_ACTIVATED (1<<1)
 
 struct fm_timer {
 	signed int ref;
@@ -271,6 +310,7 @@ struct fm_timer {
 	unsigned char tx_pwr_ctrl_en;
 	unsigned char tx_rtc_ctrl_en;
 	unsigned char tx_desense_en;
+	struct fm_lock *lock;
 
 	/* timer methods */
 #if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
@@ -327,6 +367,18 @@ extern signed int fm_workthread_get(struct fm_workthread *thiz);
 
 extern signed int fm_workthread_put(struct fm_workthread *thiz);
 
+/*
+ * FM wake lock mechanism
+ */
+
+extern FM_WAKE_LOCK_T *fm_wakelock_create(const signed char *name);
+
+extern void fm_wakelock_destroy(FM_WAKE_LOCK_T *lock);
+
+extern void fm_wakelock_get(FM_WAKE_LOCK_T *lock);
+
+extern void fm_wakelock_put(FM_WAKE_LOCK_T *lock);
+
 signed int fm_delayms(unsigned int data);
 
 signed int fm_delayus(unsigned int data);
@@ -339,4 +391,5 @@ unsigned int fm_get_u32_from_auc(unsigned char *buf);
 
 void fm_set_u32_to_auc(unsigned char *buf, unsigned int val);
 
+signed int fm_smc_call(unsigned int opid);
 #endif /* __FM_UTILS_H__ */

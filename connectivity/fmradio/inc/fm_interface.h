@@ -106,11 +106,6 @@ enum fm_i2s_pad_sel_e {
 	FM_I2S_PAD_ERR
 };
 
-enum fm_desense_list_operator {
-    ADD_DESENSE_CHANNEL,
-    REMOVE_DESENSE_CHANNEL
-};
-
 struct fm_audio_info_t {
 	enum fm_audio_path_e aud_path;
 	struct fm_i2s_info i2s_info;
@@ -168,7 +163,6 @@ struct fm {
 	struct fm_work *fm_tx_desense_wifi_work;
 	struct fm_work *fm_tx_power_ctrl_work;
 
-	unsigned int lan_enable;
 };
 
 struct fm_callback {
@@ -222,7 +216,6 @@ struct fm_basic_interface {
 	signed int (*restore_search)(void);
 	/* check if this is a valid channel */
 	signed int (*desense_check)(unsigned short freq, signed int rssi);
-	signed int (*set_desense_list)(signed int opid, unsigned short freq);
 	signed int (*get_freq_cqi)(unsigned short freq, signed int *cqi);
 	/* cqi log tool */
 	signed int (*cqi_log)(signed int min_freq, signed int max_freq, signed int space, signed int cnt);
@@ -281,10 +274,8 @@ extern signed int fm_rds_ops_register(struct fm_basic_interface *bi, struct fm_r
 extern signed int fm_rds_ops_unregister(struct fm_rds_interface *ri);
 extern signed int fm_wcn_ops_register(void);
 extern signed int fm_wcn_ops_unregister(void);
-extern int fm_register_irq(struct platform_driver *drv);
-
-extern void fm_lan_enable(void);
-extern void fm_lan_disable(void);
+extern int fm_register_irq(struct platform_driver *drv, unsigned int irq_num);
+extern int fm_register_plat(unsigned int family_id, unsigned int conn_id);
 
 /*
  * fm_get_channel_space - get the spcace of gived channel
