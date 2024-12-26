@@ -77,6 +77,7 @@ static signed int mt6631_I2s_Setting(signed int onoff, signed int mode, signed i
 #endif
 static unsigned short mt6631_chan_para_get(unsigned short freq);
 static signed int mt6631_desense_check(unsigned short freq, signed int rssi);
+static signed int mt6631_set_desense_list(int opid,unsigned short freq);
 static bool mt6631_TDD_chan_check(unsigned short freq);
 static bool mt6631_SPI_hopping_check(unsigned short freq);
 static signed int mt6631_soft_mute_tune(unsigned short freq, signed int *rssi, signed int *valid);
@@ -98,7 +99,7 @@ static bool mt6631_do_SPI_hopping_26M(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "Switch SPI clock to 26MHz failed\n");
 
-	ret = fm_host_reg_read(0x80021010, &hw_ver_id);
+	ret = fm_ioremap_read(0x180B1010, &hw_ver_id);
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: read HW ver. failed\n", __func__);
 	hw_ver_id = hw_ver_id >> 16;
@@ -167,7 +168,7 @@ static bool mt6631_do_SPI_hopping_64M(unsigned short freq)
 		"%s: freq:%d is SPI hopping channel,turn on 64M PLL\n",
 		__func__, freq);
 
-	ret = fm_host_reg_read(0x80021010, &hw_ver_id);
+	ret = fm_ioremap_read(0x180B1010, &hw_ver_id);
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: read HW ver. failed\n", __func__);
 	WCN_DBG(FM_NTC | CHIP, "%s: HW ver. ID = 0x%08x\n", __func__, hw_ver_id);
@@ -271,6 +272,82 @@ static unsigned short mt6631_get_chipid(void)
 	return 0x6631;
 }
 
+/*HQ-wangzhengyuan modify for HQ-66902  20.04.06 begin*/
+static signed int mt6631_switch_clk_64m(void)
+{
+	unsigned int val = 0;
+	int i = 0, ret = 0;
+
+	/* switch SPI clock to 64MHz */
+	ret = fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[0] = 0x1 */
+	ret = fm_host_reg_write(0x81026004, val | 0x1);
+	if (ret) {
+		WCN_DBG(FM_ALT | CHIP,
+			"RampDown Switch SPI clock to 64MHz failed\n");
+		return -1;
+	}
+
+	for (i = 0; i < 100; i++) {
+		fm_host_reg_read(0x81026004, &val);
+		if ((val & 0x18) == 0x10)
+			break;
+		fm_delayus(10);
+	}
+
+	if (i == 100) {
+		WCN_DBG(FM_ERR | CHIP,
+			"switch_SPI_clock_to_64MHz polling timeout\n");
+		return -1;
+	}
+
+	/* Capture next (with SPI Clock: 64MHz) */
+	fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[2] = 0x1 */
+	fm_host_reg_write(0x81026004, val | 0x4);
+
+	return 0;
+}
+/*HQ-wangzhengyuan modify for HQ-66902  20.04.06 end*/
+
+/*HQ-wangzhengyuan modify for HQ-66902  20.04.06 begin*/
+static signed int mt6631_switch_clk_26m(void)
+{
+	unsigned int val = 0;
+	int i = 0, ret = 0;
+
+	/* Capture next (with SPI Clock: 26MHz) */
+	fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[2] = 0x0 */
+	fm_host_reg_write(0x81026004, val & 0xFFFFFFFB);
+
+	/* switch SPI clock to 26MHz */
+	ret = fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[0] = 0x0 */
+	ret = fm_host_reg_write(0x81026004, val & 0xFFFFFFFE);
+	if (ret) {
+		WCN_DBG(FM_ALT | CHIP,
+			"RampDown Switch SPI clock to 26MHz failed\n");
+		return -1;
+	}
+
+	for (i = 0; i < 100; i++) {
+		fm_host_reg_read(0x81026004, &val);
+		if ((val & 0x18) == 0x8)
+			break;
+		fm_delayus(10);
+	}
+
+	if (i == 100) {
+		WCN_DBG(FM_ERR | CHIP,
+			"switch_SPI_clock_to_26MHz polling timeout\n");
+		return -1;
+	}
+
+	return 0;
+}
+/*HQ-wangzhengyuan modify for HQ-66902  20.04.06 end*/
+
 /*  MT6631_SetAntennaType - set Antenna type
  *  @type - 1, Short Antenna;  0, Long Antenna
  */
@@ -281,11 +358,14 @@ static signed int mt6631_SetAntennaType(signed int type)
 	WCN_DBG(FM_DBG | CHIP, "set ana to %s\n", type ? "short" : "long");
 	fm_reg_read(FM_MAIN_CG2_CTRL, &dataRead);
 
-	if (type)
+	if (type) {
+		fm_lan_enable();
 		dataRead |= ANTENNA_TYPE;
-	else
+	
+	} else {
+		fm_lan_disable();
 		dataRead &= (~ANTENNA_TYPE);
-
+	}
 	fm_reg_write(FM_MAIN_CG2_CTRL, dataRead);
 
 	return 0;
@@ -1197,7 +1277,7 @@ static signed int mt6631_PowerDown(void)
 	mt6631_do_SPI_hopping_26M();
 
 	/* Enable 26M crystal sleep */
-	if (hwid >= FM_CONNAC_1_0) {
+	if (hwid >= FM_CONNAC_1_0 && hwid <= FM_CONNAC_1_2) {
 		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
 		fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
 		tem = tem & 0xFF7FFFFF;
@@ -1258,110 +1338,6 @@ static void mt6631_bt_write(unsigned int addr, unsigned int val)
 }
 #endif
 
-static signed int mt6631_set_freq_fine_tune_reg_op(unsigned char *buf, signed int buf_size)
-{
-	signed int pkt_size = 4;
-
-	if (buf == NULL) {
-		WCN_DBG(FM_ERR | CHIP, "%s invalid pointer\n", __func__);
-		return -1;
-	}
-	if (buf_size < TX_BUF_SIZE) {
-		WCN_DBG(FM_ERR | CHIP, "%s invalid buf size(%d)\n", __func__, buf_size);
-		return -2;
-	}
-
-	/* disable DCOC IDAC auto-disable */
-	pkt_size += fm_bop_modify(0x33, 0xFDFF, 0x0000, &buf[pkt_size], buf_size - pkt_size);
-	/* A1 Host control RF register */
-	pkt_size += fm_bop_write(0x60, 0x0007, &buf[pkt_size], buf_size - pkt_size);
-	/* F3 DCOC @ LNA = 7 */
-	pkt_size += fm_bop_write(0x40, 0x01AF, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x03, 0xFAF5, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x01, 0xEEE8, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x3F, 0x3221, &buf[pkt_size], buf_size - pkt_size);
-	/* wait 1ms */
-	pkt_size += fm_bop_udelay(1000, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_rd_until(0x3F, 0x001F, 0x0001, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x3F, 0x0220, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x40, 0x0100, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x01, 0xAEE8, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x30, 0x0000, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x36, 0x017A, &buf[pkt_size], buf_size - pkt_size);
-
-	/* F4 set DSP control RF register */
-	pkt_size += fm_bop_write(0x60, 0x000F, &buf[pkt_size], buf_size - pkt_size);
-
-	return pkt_size - 4;
-}
-
-/*
- * mt6635_set_freq_fine_tune - FM RF fine tune setting
- * @buf - target buf
- * @buf_size - buffer size
- * return package size
- */
-static signed int mt6631_set_freq_fine_tune(unsigned char *buf, signed int buf_size)
-{
-	signed int pkt_size = 0;
-
-	pkt_size = mt6631_set_freq_fine_tune_reg_op(buf, buf_size);
-	return fm_op_seq_combine_cmd(buf, FM_ENABLE_OPCODE, pkt_size);
-}
-
-static signed int mt6631_dcoc_recal(unsigned short freq)
-{
-	signed int ret = 0;
-	unsigned short pkt_size;
-
-	/* FM VCO Calibration */
-	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /* Set 0x60 [D3:D0] = 0x07*/
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: Host Control RF register 0x60 = 0x7 failed\n", __func__);
-
-	fm_delayus(5);
-	if (freq >= 750) {
-		fm_reg_write(0x37, 0xF68C);
-		fm_reg_write(0x38, 0x0B53);
-		ret = fm_set_bits(0x30, 0x0014 << 8, 0xC0FF);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: Set 0x30 failed\n", __func__);
-
-	} else {
-		fm_reg_write(0x37, 0x0675);
-		fm_reg_write(0x38, 0x0F54);
-		ret = fm_set_bits(0x30, 0x001C << 8, 0xC0FF);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: Set 0x30 failed\n", __func__);
-	}
-	ret = fm_set_bits(0x30, 0x0001 << 14, 0xBFFF);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: Set 0x30 failed\n", __func__);
-
-	fm_reg_write(0x40, 0x010F);
-	fm_delayus(5);
-	fm_reg_write(0x36, 0x037A);
-	fm_reg_write(0x32, 0x8000);
-	fm_delayus(200);
-	ret = fm_set_bits(0x3D, 0x0001 << 2, 0xFFFB);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: Set 0x3D failed\n", __func__);
-
-	fm_reg_write(0x32, 0x0000);
-
-	if (FM_LOCK(cmd_buf_lock))
-		return -FM_ELOCK;
-	pkt_size = mt6631_set_freq_fine_tune(cmd_buf, TX_BUF_SIZE);
-	ret = fm_cmd_tx(cmd_buf, pkt_size, FLAG_EN, SW_RETRY_CNT, EN_TIMEOUT, NULL);
-	FM_UNLOCK(cmd_buf_lock);
-	if (ret) {
-		WCN_DBG(FM_ALT | CHIP, "mt6635_pwrup_fine_tune failed\n");
-		return ret;
-	}
-
-	return ret;
-}
-
 static bool mt6631_SetFreq(unsigned short freq)
 {
 	signed int ret = 0;
@@ -1388,13 +1364,6 @@ static bool mt6631_SetFreq(unsigned short freq)
 
 	WCN_DBG(FM_INF | MAIN, "GPS %d\n", ret);
 #endif
-
-	if (projectid == 0x6789) {
-		ret = mt6631_dcoc_recal(freq);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: DCOC Recal fail!\n",
-				__func__);
-	}
 
 	/* A0. Host contrl RF register */
 	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /* Set 0x60 [D3:D0] = 0x07*/
@@ -1653,18 +1622,18 @@ static signed int mt6631_full_cqi_get(signed int min_freq, signed int max_freq, 
 				for (i = 0; i < fm_res->cqi[1]; i++) {
 					/* just for debug */
 					WCN_DBG(FM_NTC | CHIP,
-						"freq %d, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x\n",
+						"%04d, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x,\n",
 						p_cqi[i].ch, p_cqi[i].rssi, p_cqi[i].pamd,
 						p_cqi[i].pr, p_cqi[i].fpamd, p_cqi[i].mr,
 						p_cqi[i].atdc, p_cqi[i].prx, p_cqi[i].atdev,
 						p_cqi[i].smg, p_cqi[i].drssi);
 					/* format to buffer */
 					if (sprintf(cqi_log_buf,
-							"%04d, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x,\n",
-							p_cqi[i].ch, p_cqi[i].rssi, p_cqi[i].pamd,
-							p_cqi[i].pr, p_cqi[i].fpamd, p_cqi[i].mr,
-							p_cqi[i].atdc, p_cqi[i].prx, p_cqi[i].atdev,
-							p_cqi[i].smg, p_cqi[i].drssi) < 0)
+						    "%04d, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x,\n",
+						    p_cqi[i].ch, p_cqi[i].rssi, p_cqi[i].pamd,
+						    p_cqi[i].pr, p_cqi[i].fpamd, p_cqi[i].mr,
+						    p_cqi[i].atdc, p_cqi[i].prx, p_cqi[i].atdev,
+						    p_cqi[i].smg, p_cqi[i].drssi) < 0)
 						WCN_DBG(FM_NTC | CHIP, "sprintf fail\n");
 					/* write back to log file */
 					fm_file_write(cqi_log_path, cqi_log_buf, strlen(cqi_log_buf), &pos);
@@ -2132,6 +2101,7 @@ signed int mt6631_fm_low_ops_register(struct fm_callback *cb, struct fm_basic_in
 	bi->is_dese_chan = mt6631_is_dese_chan;
 	bi->softmute_tune = mt6631_soft_mute_tune;
 	bi->desense_check = mt6631_desense_check;
+	bi->set_desense_list = mt6631_set_desense_list;
 	bi->cqi_log = mt6631_full_cqi_get;
 	bi->pre_search = mt6631_pre_search;
 	bi->restore_search = mt6631_restore_search;
@@ -2231,9 +2201,16 @@ static const signed char mt6631_chan_para_map[] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0,	/* 10700~10795 */
 	0			/* 10800 */
 };
-static const unsigned short mt6631_scan_dese_list[] = {
+
+#if defined(TARGET_PRODUCT_SHIVA) || defined(TARGET_PRODUCT_LANCELOT)
+static unsigned short mt6631_scan_dese_list[] = {
+	6910, 6920, 7680, 7800, 8450, 9100, 9200, 9210, 9220, 9230, 9270, 9520, 9570, 9580, 9590, 9600, 9620, 9790, 9820, 9830, 9870, 9900, 9980, 9990, 10190, 10200, 10340, 10350, 10400, 10410, 10420, 10430, 10480, 10490, 10710, 10750, 10760, 10770, 10780
+};
+#else
+static unsigned short mt6631_scan_dese_list[] = {
 	6910, 6920, 7680, 7800, 8450, 9210, 9220, 9230, 9590, 9600, 9830, 9900, 9980, 9990, 10400, 10750, 10760
 };
+#endif
 
 static const unsigned short mt6631_SPI_hopping_list[] = {
 	6510, 6520, 6530, 7780, 7790, 7800, 7810, 7820, 9090, 9100, 9110, 9120, 10380, 10390, 10400, 10410, 10420
@@ -2330,6 +2307,31 @@ static signed int mt6631_desense_check(unsigned short freq, signed int rssi)
 		WCN_DBG(FM_DBG | CHIP, "desen_rssi %d th:%d\n", rssi, fm_config.rx_cfg.desene_rssi_th);
 	}
 	return 0;
+}
+
+static signed int mt6631_set_desense_list(int opid, unsigned short freq)
+{
+    signed int size;
+    size = ARRAY_SIZE(mt6631_scan_dese_list);
+    WCN_DBG(FM_NTC | CHIP, "set desense list opid %d\n", opid);
+    switch(opid) {
+        case ADD_DESENSE_CHANNEL:
+        {
+            while (size) {
+            if (mt6631_scan_dese_list[size - 1] == freq)
+                mt6631_scan_dese_list[size-1] = 0;
+                WCN_DBG(FM_NTC| CHIP, "remove desense channel %d \n", freq);
+                return 1;
+                size--;
+            }
+            break;
+        }
+        case REMOVE_DESENSE_CHANNEL:
+            break;
+        default:
+            return 0;
+    }
+    return 0;
 }
 
 static bool mt6631_TDD_chan_check(unsigned short freq)
