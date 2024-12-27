@@ -32,7 +32,9 @@ ccflags-y += -D MTK_WCN_WMT_STP_EXP_SYMBOL_ABSTRACT
 
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat
-ccflags-y += -I$(TOP)/common/common_main
+ccflags-y += -I$(TOP)/common/common_main/include
+ccflags-y += -I$(TOP)/common/common_main/linux/include
+ccflags-y += -I$(TOP)/common/common_main/platform/include
 
 ifeq ($(CONFIG_FM_USER_LOAD),1)
     ccflags-y += -D CONFIG_MTK_USER_BUILD
