@@ -64,7 +64,7 @@ $(info [fm_drv:Kbuild] src = $(src))
 $(info [fm_drv:Kbuild] KO_CODE_PATH = $(KO_CODE_PATH))
 
 ifeq ($(CFG_FM_CHIP),)
-    FM_CHIP := mt6631_6635
+    FM_CHIP := mt6631
 
     ccflags-y += -I$(KO_CODE_PATH)/chips/mt6631/inc -I$(KO_CODE_PATH)/chips/mt6635/inc
 
