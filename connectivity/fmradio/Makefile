@@ -46,7 +46,6 @@ else
 ifneq ($(wildcard $(abspath $(O)/../vendor/mediatek/kernel_modules/connectivity/conninfra/Module.symvers)) ,)
 	$(call build_kernel_modules,connac2x,true,,mt6635,$(extra_symbols))
 endif
-	$(call build_kernel_modules,mt6631_6635,false,,,$(extra_symbols))
 	$(call build_kernel_modules,mt6631,false,,mt6631,$(extra_symbols))
 	$(call build_kernel_modules,mt6635,false,,mt6635,$(extra_symbols))
 	# legacy chip
