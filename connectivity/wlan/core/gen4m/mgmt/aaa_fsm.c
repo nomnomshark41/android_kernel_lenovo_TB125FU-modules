@@ -223,7 +223,8 @@ void aaaFsmRunEventTxReqTimeOut(IN struct ADAPTER *prAdapter,
 	struct STA_RECORD *prStaRec = (struct STA_RECORD *) plParamPtr;
 	struct BSS_INFO *prBssInfo;
 
-	if (!prStaRec)
+	if (!prStaRec ||
+		prStaRec->ucBssIndex > MAX_BSSID_NUM)
 		return;
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, prStaRec->ucBssIndex);
@@ -231,9 +232,6 @@ void aaaFsmRunEventTxReqTimeOut(IN struct ADAPTER *prAdapter,
 	DBGLOG(AAA, LOUD,
 		"EVENT-TIMER: TX REQ TIMEOUT, Current Time = %d\n",
 		kalGetTimeTick());
-
-	/* Trigger statistics log if Auth/Assoc Tx timeout */
-	wlanTriggerStatsLog(prAdapter, prAdapter->rWifiVar.u4StatsLogDuration);
 
 	switch (prStaRec->eAuthAssocState) {
 	case AAA_STATE_SEND_AUTH2:
@@ -356,11 +354,25 @@ void aaaFsmRunEventRxAuth(IN struct ADAPTER *prAdapter,
 						&u2StatusCode);
 
 #if CFG_SUPPORT_802_11W
+					if (prBssInfo->u4RsnSelectedAKMSuite ==
+						RSN_AKM_SUITE_SAE)
+						break;
+					if (prBssInfo->u4RsnSelectedAKMSuite ==
+						RSN_AKM_SUITE_OWE)
+						break;
+
 					/* AP PMF, if PMF connection,
 					 * ignore Rx auth
 					 */
 					/* Certification 4.3.3.4 */
-					if (rsnCheckBipKeyInstalled(prAdapter,
+
+					if (prAdapter->rWifiVar
+						.fgSapAuthPolicy ==
+						P2P_AUTH_POLICY_RESET)
+						DBGLOG(P2P, INFO,
+							"Ignore PMF check\n");
+					else if (rsnCheckBipKeyInstalled(
+						prAdapter,
 						prStaRec)) {
 						DBGLOG(AAA, INFO,
 							"Drop RxAuth\n");
@@ -481,12 +493,21 @@ bow_proc:
 
 		if (prBssInfo->u4RsnSelectedAKMSuite ==
 			RSN_AKM_SUITE_SAE) {
-			kalP2PIndicateRxMgmtFrame(
+			kalP2PIndicateRxMgmtFrame(prAdapter,
 				prAdapter->prGlueInfo,
 				prSwRfb,
 				FALSE,
 				(uint8_t)prBssInfo->u4PrivateData);
 			DBGLOG(AAA, INFO, "Forward RxAuth\n");
+			return;
+		} else if (prBssInfo->u4RsnSelectedAKMSuite ==
+			RSN_AKM_SUITE_OWE) {
+			kalP2PIndicateRxMgmtFrame(prAdapter,
+				prAdapter->prGlueInfo,
+				prSwRfb,
+				FALSE,
+				(uint8_t)prBssInfo->u4PrivateData);
+			DBGLOG(AAA, INFO, "[OWE] Forward RxAuth\n");
 			return;
 		}
 
@@ -632,7 +653,8 @@ uint32_t aaaFsmRunEventRxAssoc(IN struct ADAPTER *prAdapter,
 				GET_BSS_INFO_BY_INDEX(prAdapter,
 					prStaRec->ucBssIndex);
 
-			if (prBssInfo->fgIsNetActive) {
+			if (prBssInfo &&
+				prBssInfo->fgIsNetActive) {
 
 				/* 4 <2.1> Validate Assoc Req Frame and
 				 * get Status Code
@@ -672,7 +694,8 @@ uint32_t aaaFsmRunEventRxAssoc(IN struct ADAPTER *prAdapter,
 			prBssInfo =
 				GET_BSS_INFO_BY_INDEX(prAdapter,
 					prStaRec->ucBssIndex);
-
+			if (!prBssInfo)
+				break;
 			if ((prBssInfo->fgIsNetActive)
 				&& (prBssInfo->eCurrentOPMode == OP_MODE_BOW)) {
 
@@ -878,7 +901,16 @@ uint32_t aaaFsmRunEventRxAssoc(IN struct ADAPTER *prAdapter,
 
 		/* NOTE: Ignore the return status for AAA */
 		/* 4 <4.2> Reply  Assoc Resp */
-		assocSendReAssocRespFrame(prAdapter, prStaRec);
+		if (prBssInfo->u4RsnSelectedAKMSuite ==
+			RSN_AKM_SUITE_OWE) {
+			kalP2PIndicateRxMgmtFrame(prAdapter,
+				prAdapter->prGlueInfo,
+				prSwRfb,
+				FALSE,
+				(uint8_t)prBssInfo->u4PrivateData);
+			DBGLOG(AAA, INFO, "[OWE] Forward RxAssoc\n");
+		} else
+			assocSendReAssocRespFrame(prAdapter, prStaRec);
 
 #if CFG_SUPPORT_802_11W
 		/* AP PMF */
@@ -932,14 +964,10 @@ aaaFsmRunEventTxDone(IN struct ADAPTER *prAdapter,
 	ASSERT(prStaRec->ucBssIndex <= prAdapter->ucHwBssIdNum);
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, prStaRec->ucBssIndex);
-
+	if (!prBssInfo)
+		return WLAN_STATUS_SUCCESS;
 	DBGLOG(AAA, TRACE, "TxDone ucStaState:%d, eAuthAssocState:%d\n",
 		prStaRec->ucStaState, prStaRec->eAuthAssocState);
-
-	/* Trigger statistics log if Auth/Assoc Tx failed */
-	if (rTxDoneStatus != TX_RESULT_SUCCESS)
-		wlanTriggerStatsLog(prAdapter,
-			prAdapter->rWifiVar.u4StatsLogDuration);
 
 	switch (prStaRec->eAuthAssocState) {
 	case AAA_STATE_SEND_AUTH2:
@@ -1006,6 +1034,11 @@ aaaFsmRunEventTxDone(IN struct ADAPTER *prAdapter,
 			 */
 			if (assocCheckTxReAssocRespFrame(prAdapter,
 				prMsduInfo) != WLAN_STATUS_SUCCESS)
+				break;
+			if (prBssInfo &&
+					!kalP2PIsTxCarrierOn(prAdapter
+					->prGlueInfo,
+					prBssInfo))
 				break;
 
 			if (prStaRec->u2StatusCode == STATUS_CODE_SUCCESSFUL) {

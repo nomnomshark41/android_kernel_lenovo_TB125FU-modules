@@ -959,6 +959,9 @@ wlanoidSetP2PMulticastList(IN struct ADAPTER *prAdapter,
 	/* TODO: */
 	rCmdMacMcastAddr.ucBssIndex = prAdapter->ucP2PDevBssIdx;
 	kalMemCopy(rCmdMacMcastAddr.arAddress, pvSetBuffer, u4SetBufferLen);
+	rCmdMacMcastAddr.aucReserved[0] = 0;
+	rCmdMacMcastAddr.aucReserved[1] = 0;
+	rCmdMacMcastAddr.aucReserved[2] = 0;
 
 	return wlanoidSendSetQueryP2PCmd(prAdapter,
 				CMD_ID_MAC_MCAST_ADDR,
@@ -1475,6 +1478,8 @@ wlanoidSetUApsdParam(IN struct ADAPTER *prAdapter,
 	prUapsdParam = (struct PARAM_CUSTOM_UAPSD_PARAM_STRUCT *) pvSetBuffer;
 
 	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, prUapsdParam->ucBssIdx);
+	if (!prBssInfo)
+		return WLAN_STATUS_NOT_SUPPORTED;
 	prPmProfSetupInfo = &prBssInfo->rPmProfSetupInfo;
 
 	kalMemZero(&rCmdUapsdParam,
@@ -1726,13 +1731,18 @@ uint32_t
 wlanoidAbortP2pScan(IN struct ADAPTER *prAdapter,
 		OUT void *pvQueryBuffer,
 		IN uint32_t u4QueryBufferLen,
-		OUT uint32_t *pu4QueryInfoLen) {
-
-	DBGLOG(P2P, INFO, "wlanoidAbortP2pScan\n");
+		OUT uint32_t *pu4QueryInfoLen)
+{
+	uint8_t ucBssIdx;
 
 	ASSERT(prAdapter);
 
-	p2pDevFsmRunEventScanAbort(prAdapter, NULL);
+	ucBssIdx = *((uint8_t *) pvQueryBuffer);
+
+	if (ucBssIdx == prAdapter->ucP2PDevBssIdx)
+		p2pDevFsmRunEventScanAbort(prAdapter, ucBssIdx);
+	else
+		p2pRoleFsmRunEventScanAbort(prAdapter, ucBssIdx);
 
 	return WLAN_STATUS_SUCCESS;
 }

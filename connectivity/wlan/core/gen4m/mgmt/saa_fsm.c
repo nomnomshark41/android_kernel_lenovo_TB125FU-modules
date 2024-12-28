@@ -146,9 +146,7 @@ saaFsmSteps(IN struct ADAPTER *prAdapter,
 
 	do {
 
-		if (prStaRec->eAuthAssocState >= 0
-				&& prStaRec->eAuthAssocState < AA_STATE_NUM
-				&& eNextState >= 0
+		if (prStaRec->eAuthAssocState < AA_STATE_NUM
 				&& eNextState < AA_STATE_NUM) {
 			DBGLOG(SAA, STATE, "[SAA]TRANSITION: [%s] -> [%s]\n",
 				apucDebugAAState[prStaRec->eAuthAssocState],
@@ -201,30 +199,23 @@ saaFsmSteps(IN struct ADAPTER *prAdapter,
 
 			/* Only trigger this event once */
 			if (ePreviousState != prStaRec->eAuthAssocState) {
+				uint32_t status =
+					prStaRec->u2StatusCode ==
+					STATUS_CODE_SUCCESSFUL &&
+					prRetainedSwRfb ?
+					WLAN_STATUS_SUCCESS :
+					WLAN_STATUS_FAILURE;
+				uint32_t result = saaFsmSendEventJoinComplete(
+						prAdapter, status, prStaRec,
+						prRetainedSwRfb);
 
-				if (prRetainedSwRfb) {
-					if (saaFsmSendEventJoinComplete(
-						prAdapter,
-						WLAN_STATUS_SUCCESS,
-						prStaRec,
-						prRetainedSwRfb) ==
-						WLAN_STATUS_SUCCESS) {
-						/* ToDo:: Nothing */
-					} else {
-						eNextState = AA_STATE_RESOURCE;
-						fgIsTransition = TRUE;
-					}
-				} else {
-					if (saaFsmSendEventJoinComplete(
-						prAdapter,
-						WLAN_STATUS_FAILURE,
-						prStaRec, NULL) ==
-						WLAN_STATUS_RESOURCES) {
+				if (result != WLAN_STATUS_SUCCESS) {
+					if (status == WLAN_STATUS_SUCCESS ||
+					    result == WLAN_STATUS_RESOURCES) {
 						eNextState = AA_STATE_RESOURCE;
 						fgIsTransition = TRUE;
 					}
 				}
-
 			}
 
 			/* Free allocated TCM memory */
@@ -604,9 +595,14 @@ void saaFsmRunEventStart(IN struct ADAPTER *prAdapter,
 	/* cnmStaRecChangeState(prStaRec, STA_STATE_1); */
 
 	/* 4 <6> Decide if this BSS 20/40M bandwidth is allowed */
-	if (prStaRec->ucBssIndex < prAdapter->ucHwBssIdNum) {
+	if (prStaRec->ucBssIndex < MAX_BSS_INDEX) {
 		prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter,
 						  prStaRec->ucBssIndex);
+		if (prBssInfo == NULL) {
+			DBGLOG(RLM, ERROR, "prBssInfo is %d null\n",
+				prStaRec->ucBssIndex);
+			return;
+		}
 
 		if ((prAdapter->rWifiVar.ucAvailablePhyTypeSet &
 		     PHY_TYPE_SET_802_11N) &&
@@ -705,11 +701,6 @@ saaFsmRunEventTxDone(IN struct ADAPTER *prAdapter,
 		DBGLOG(SAA, INFO,
 		       "EVENT-TX DONE [status: %d][seq: %d]: Current Time = %d\n",
 		       rTxDoneStatus, prMsduInfo->ucTxSeqNum, kalGetTimeTick());
-
-	/* Trigger statistics log if Auth/Assoc Tx failed */
-	if (rTxDoneStatus != TX_RESULT_SUCCESS)
-		wlanTriggerStatsLog(prAdapter,
-				    prAdapter->rWifiVar.u4StatsLogDuration);
 
 	eNextState = prStaRec->eAuthAssocState;
 
@@ -849,9 +840,10 @@ void saaFsmRunEventTxReqTimeOut(IN struct ADAPTER *prAdapter,
 
 	DBGLOG(SAA, LOUD, "EVENT-TIMER: TX REQ TIMEOUT, Current Time = %d\n",
 	       kalGetTimeTick());
-
-	/* Trigger statistics log if Auth/Assoc Tx timeout */
-	wlanTriggerStatsLog(prAdapter, prAdapter->rWifiVar.u4StatsLogDuration);
+/* fos_change begin */
+#if CFG_SUPPORT_EXCEPTION_STATISTICS
+		prAdapter->total_mgmtTX_timeout_count++;
+#endif /* fos_change end */
 
 	switch (prStaRec->eAuthAssocState) {
 	case SAA_STATE_SEND_AUTH1:
@@ -886,6 +878,11 @@ void saaFsmRunEventRxRespTimeOut(IN struct ADAPTER *prAdapter,
 
 	if (!prStaRec)
 		return;
+
+/* fos_change begin */
+#if CFG_SUPPORT_EXCEPTION_STATISTICS
+		prAdapter->total_mgmtRX_timeout_count++;
+#endif /* fos_change end */
 
 	eNextState = prStaRec->eAuthAssocState;
 
@@ -1048,9 +1045,10 @@ void saaFsmRunEventRxAuth(IN struct ADAPTER *prAdapter,
 				AUTH_ALGORITHM_NUM_FAST_BSS_TRANSITION &&
 				rStatus != WLAN_STATUS_SUCCESS) {
 					DBGLOG(SAA, INFO,
-						"Check Rx Auth4 Frame failed, may be MIC error, %pM, status %d\n",
-					       (prStaRec->aucMacAddr),
-					       u2StatusCode);
+					      "Rx Auth4 fail [" MACSTR
+					      "], status %d, maybe MIC error\n",
+					      MAC2STR(prStaRec->aucMacAddr),
+					      u2StatusCode);
 					/* Reset Send Auth/(Re)Assoc Frame Count
 					 */
 					prStaRec->ucTxAuthAssocRetryCount = 0;
@@ -1084,8 +1082,23 @@ void saaFsmRunEventRxAuth(IN struct ADAPTER *prAdapter,
 		break;
 
 	case SAA_STATE_EXTERNAL_AUTH:
-		kalIndicateRxMgmtFrame(prAdapter->prGlueInfo, prSwRfb,
-				       prStaRec->ucBssIndex);
+		if (authCheckRxAuthFrameStatus(prAdapter,
+					       prSwRfb,
+					       AUTH_TRANSACTION_SEQ_2,
+					       &u2StatusCode) ==
+					       WLAN_STATUS_SUCCESS) {
+			/* Record join fail status code only*/
+			if (u2StatusCode != STATUS_CODE_SUCCESSFUL) {
+				DBGLOG(SAA, INFO,
+				       "Auth Req was rejected by [" MACSTR
+				       "], Status Code = %d\n",
+				       MAC2STR(prStaRec->aucMacAddr),
+				       u2StatusCode);
+				prStaRec->u2StatusCode = u2StatusCode;
+			}
+		}
+		kalIndicateRxMgmtFrame(prAdapter, prAdapter->prGlueInfo,
+				prSwRfb, prStaRec->ucBssIndex);
 		break;
 
 	default:
@@ -1142,6 +1155,7 @@ uint32_t saaFsmRunEventRxAssoc(IN struct ADAPTER *prAdapter,
 
 			/* Record the Status Code of Authentication Request */
 			prStaRec->u2StatusCode = u2StatusCode;
+			prRetainedSwRfb = prSwRfb;
 
 			if (u2StatusCode == STATUS_CODE_SUCCESSFUL) {
 
@@ -1157,8 +1171,6 @@ uint32_t saaFsmRunEventRxAssoc(IN struct ADAPTER *prAdapter,
 
 				/* Clear history. */
 				prStaRec->ucJoinFailureCount = 0;
-
-				prRetainedSwRfb = prSwRfb;
 				rStatus = WLAN_STATUS_PENDING;
 			} else {
 				cnmStaRecChangeState(prAdapter, prStaRec,
@@ -1241,6 +1253,8 @@ uint32_t saaFsmRunEventRxDeauth(IN struct ADAPTER *prAdapter,
 
 		if (IS_STA_IN_AIS(prStaRec)) {
 			struct BSS_INFO *prAisBssInfo;
+			struct AIS_FSM_INFO *prAisFsmInfo;
+			struct BSS_DESC *prBssDesc;
 			uint8_t ucBssIndex = 0;
 
 			if (!IS_AP_STA(prStaRec))
@@ -1248,8 +1262,19 @@ uint32_t saaFsmRunEventRxDeauth(IN struct ADAPTER *prAdapter,
 
 			ucBssIndex = prStaRec->ucBssIndex;
 
-			prAisBssInfo = aisGetAisBssInfo(prAdapter,
-				ucBssIndex);
+			prAisBssInfo = aisGetAisBssInfo(prAdapter, ucBssIndex);
+			prAisFsmInfo = aisGetAisFsmInfo(prAdapter, ucBssIndex);
+			prBssDesc = prAisFsmInfo->prTargetBssDesc;
+
+			if (prBssDesc && UNEQUAL_MAC_ADDR(prBssDesc->aucBSSID,
+				prDeauthFrame->aucSrcAddr)) {
+				DBGLOG(SAA, WARN,
+					"Received a Deauth[" MACSTR
+					"] unmatch target[" MACSTR "]\n",
+					MAC2STR(prDeauthFrame->aucSrcAddr),
+					MAC2STR(prBssDesc->aucBSSID));
+				break;
+			}
 
 			/* if state != CONNECTED, don't do disconnect again */
 			if (kalGetMediaStateIndicated(prAdapter->prGlueInfo,
@@ -1276,14 +1301,15 @@ uint32_t saaFsmRunEventRxDeauth(IN struct ADAPTER *prAdapter,
 						ucBssIndex);
 
 					DBGLOG(RSN, INFO,
-					       "QM RX MGT: Deauth frame, P=%d Sec=%d CM=%d BC=%d fc=%02x\n",
+					       "QM RX MGT: Deauth frame, P=%d Sec=%d CM=%d BC=%d fc=%02x wlanIdx=%d\n",
 					       prAisSpecBssInfo->
 						fgMgmtProtection, (uint8_t)
 						prSwRfb->ucSecMode,
 						prSwRfb->fgIsCipherMS,
 						IS_BMCAST_MAC_ADDR
 						(prDeauthFrame->aucDestAddr),
-						prDeauthFrame->u2FrameCtrl);
+						prDeauthFrame->u2FrameCtrl,
+						ucWlanIdx);
 					if (prAisSpecBssInfo->fgMgmtProtection
 					    && prSwRfb->fgIsCipherMS
 					    /* HAL_RX_STATUS_GET_SEC_MODE
@@ -1297,6 +1323,7 @@ uint32_t saaFsmRunEventRxDeauth(IN struct ADAPTER *prAdapter,
 						return WLAN_STATUS_SUCCESS;
 					}
 #endif
+
 					saaSendDisconnectMsgHandler(prAdapter,
 					      prStaRec,
 					      prAisBssInfo,
@@ -1316,6 +1343,14 @@ uint32_t saaFsmRunEventRxDeauth(IN struct ADAPTER *prAdapter,
 #if CFG_ENABLE_BT_OVER_WIFI
 		else if (IS_STA_BOW_TYPE(prStaRec))
 			bowRunEventRxDeAuth(prAdapter, prStaRec, prSwRfb);
+#endif
+#if CFG_SUPPORT_NAN
+		else if (IS_STA_NAN_TYPE(prStaRec)) {
+			DBGLOG(SAA, WARN,
+			       "Received a Deauth: wlanIdx[%d] from NAN network\n",
+			       ucWlanIdx);
+			break;
+		}
 #endif
 		else
 			ASSERT(0);
@@ -1377,72 +1412,43 @@ saaSendDisconnectMsgHandler(IN struct ADAPTER *prAdapter,
 			    IN struct BSS_INFO *prAisBssInfo,
 			    IN enum ENUM_AA_FRM_TYPE eFrmType)
 {
-	if (eFrmType == FRM_DEAUTH) {
-		if (prStaRec->ucStaState == STA_STATE_3) {
-			struct MSG_AIS_ABORT *prAisAbortMsg;
+	if (prStaRec->ucStaState == STA_STATE_3) {
+		struct MSG_AIS_ABORT *prAisAbortMsg;
+		u_int8_t fgIsTxAllowed;
 
-			/* NOTE(Kevin): Change state immediately to
-			 * avoid starvation of MSG buffer because of too
-			 * many deauth frames before changing the STA
-			 * state.
-			 */
-			cnmStaRecChangeState(prAdapter, prStaRec,
-					     STA_STATE_1);
+		/* Backup txallowed status here because
+		 * cnmStaRecChangeState will change it
+		 */
+		fgIsTxAllowed = prStaRec->fgIsTxAllowed;
 
-			prAisAbortMsg =
-			    (struct MSG_AIS_ABORT *)
-			    cnmMemAlloc(prAdapter,
-					RAM_TYPE_MSG,
-					sizeof(struct MSG_AIS_ABORT));
-			if (!prAisAbortMsg)
-				return;
+		/* NOTE(Kevin): Change state immediately to
+		 * avoid starvation of MSG buffer because of too
+		 * many deauth frames before changing the STA
+		 * state.
+		 */
+		cnmStaRecChangeState(prAdapter, prStaRec,
+			eFrmType == FRM_DEAUTH ? STA_STATE_1 : STA_STATE_2);
 
-			prAisAbortMsg->rMsgHdr.eMsgId =
-				MID_SAA_AIS_FSM_ABORT;
-			prAisAbortMsg->ucReasonOfDisconnect =
-				DISCONNECT_REASON_CODE_DEAUTHENTICATED;
-			prAisAbortMsg->fgDelayIndication =
-				!cnmP2pIsActive(prAdapter);
-			prAisAbortMsg->ucBssIndex =
-				prStaRec->ucBssIndex;
-			mboxSendMsg(prAdapter, MBOX_ID_0,
-				    (struct MSG_HDR *) prAisAbortMsg,
-				    MSG_SEND_METHOD_BUF);
-		} else {
-			/* TODO(Kevin): Joining Abort */
-		}
-	} else {	/* FRM_DISASSOC */
-		if (prStaRec->ucStaState == STA_STATE_3) {
-			struct MSG_AIS_ABORT *prAisAbortMsg;
+		prAisAbortMsg =
+		    (struct MSG_AIS_ABORT *)
+		    cnmMemAlloc(prAdapter,
+				RAM_TYPE_MSG,
+				sizeof(struct MSG_AIS_ABORT));
+		if (!prAisAbortMsg)
+			return;
 
-			/* Change state immediately to avoid starvation
-			 * of MSG buffer because of too many disassoc
-			 * frames before changing the STA state.
-			 */
-			cnmStaRecChangeState(prAdapter, prStaRec,
-					     STA_STATE_2);
-
-			prAisAbortMsg = (struct MSG_AIS_ABORT *)
-			      cnmMemAlloc(prAdapter,
-					  RAM_TYPE_MSG,
-					  sizeof(struct MSG_AIS_ABORT));
-			if (!prAisAbortMsg)
-				return;
-
-			prAisAbortMsg->rMsgHdr.eMsgId =
-				MID_SAA_AIS_FSM_ABORT;
-			prAisAbortMsg->ucReasonOfDisconnect =
+		prAisAbortMsg->rMsgHdr.eMsgId =
+			MID_SAA_AIS_FSM_ABORT;
+		prAisAbortMsg->ucReasonOfDisconnect =
+			eFrmType == FRM_DEAUTH ?
+				DISCONNECT_REASON_CODE_DEAUTHENTICATED :
 				DISCONNECT_REASON_CODE_DISASSOCIATED;
-			prAisAbortMsg->fgDelayIndication =
-				!cnmP2pIsActive(prAdapter);
-			prAisAbortMsg->ucBssIndex =
-				prStaRec->ucBssIndex;
-			mboxSendMsg(prAdapter, MBOX_ID_0,
-				    (struct MSG_HDR *) prAisAbortMsg,
-				    MSG_SEND_METHOD_BUF);
-		} else {
-			/* TODO(Kevin): Joining Abort */
-		}
+		prAisAbortMsg->fgDelayIndication = fgIsTxAllowed;
+		prAisAbortMsg->ucBssIndex =
+			prStaRec->ucBssIndex;
+		mboxSendMsg(prAdapter, MBOX_ID_0,
+			    (struct MSG_HDR *) prAisAbortMsg,
+			    MSG_SEND_METHOD_BUF);
 	}
 	if (prAisBssInfo)
 		prAisBssInfo->u2DeauthReason = prStaRec->u2ReasonCode;
@@ -1488,6 +1494,8 @@ uint32_t saaFsmRunEventRxDisassoc(IN struct ADAPTER *prAdapter,
 
 		if (IS_STA_IN_AIS(prStaRec)) {
 			struct BSS_INFO *prAisBssInfo;
+			struct AIS_FSM_INFO *prAisFsmInfo;
+			struct BSS_DESC *prBssDesc;
 			uint8_t ucBssIndex = 0;
 
 			if (!IS_AP_STA(prStaRec))
@@ -1495,8 +1503,19 @@ uint32_t saaFsmRunEventRxDisassoc(IN struct ADAPTER *prAdapter,
 
 			ucBssIndex = prStaRec->ucBssIndex;
 
-			prAisBssInfo = aisGetAisBssInfo(prAdapter,
-				ucBssIndex);
+			prAisBssInfo = aisGetAisBssInfo(prAdapter, ucBssIndex);
+			prAisFsmInfo = aisGetAisFsmInfo(prAdapter, ucBssIndex);
+			prBssDesc = prAisFsmInfo->prTargetBssDesc;
+
+			if (prBssDesc && UNEQUAL_MAC_ADDR(prBssDesc->aucBSSID,
+				prDisassocFrame->aucSrcAddr)) {
+				DBGLOG(SAA, WARN,
+					"Received a DisAssoc[" MACSTR
+					"] unmatch target[" MACSTR "]\n",
+					MAC2STR(prDisassocFrame->aucSrcAddr),
+					MAC2STR(prBssDesc->aucBSSID));
+				break;
+			}
 
 			if (prStaRec->ucStaState > STA_STATE_1) {
 
@@ -1516,14 +1535,15 @@ uint32_t saaFsmRunEventRxDisassoc(IN struct ADAPTER *prAdapter,
 						ucBssIndex);
 
 					DBGLOG(RSN, INFO,
-					       "QM RX MGT: Disassoc frame, P=%d Sec=%d CM=%d BC=%d fc=%02x\n",
+					       "QM RX MGT: Disassoc frame, P=%d Sec=%d CM=%d BC=%d fc=%02x wlanIdx=%d\n",
 					       prAisSpecBssInfo->
 						fgMgmtProtection, (uint8_t)
 						prSwRfb->ucSecMode,
 						prSwRfb->fgIsCipherMS,
 						IS_BMCAST_MAC_ADDR
 						(prDisassocFrame->aucDestAddr),
-						prDisassocFrame->u2FrameCtrl);
+						prDisassocFrame->u2FrameCtrl,
+						ucWlanIdx);
 					if (IS_STA_IN_AIS(prStaRec) &&
 					    prAisSpecBssInfo->fgMgmtProtection
 					    && prSwRfb->fgIsCipherMS
@@ -1543,6 +1563,14 @@ uint32_t saaFsmRunEventRxDisassoc(IN struct ADAPTER *prAdapter,
 						return WLAN_STATUS_SUCCESS;
 					}
 #endif
+					/* fos_change begin */
+#if CFG_SUPPORT_EXCEPTION_STATISTICS
+					prAdapter->total_deauth_rx_count++;
+					if (prStaRec->u2ReasonCode <=
+						REASON_CODE_BEACON_TIMEOUT)
+						prAdapter->deauth_rx_count
+						[prStaRec->u2ReasonCode]++;
+#endif /* fos_change end */
 					saaSendDisconnectMsgHandler(prAdapter,
 					      prStaRec,
 					      prAisBssInfo,
@@ -1639,8 +1667,7 @@ void saaFsmRunEventAbort(IN struct ADAPTER *prAdapter,
 	cnmTimerStopTimer(prAdapter, &prStaRec->rTxReqDoneOrRxRespTimer);
 
 	if (prStaRec->eAuthAssocState != AA_STATE_IDLE) {
-		if (prStaRec->eAuthAssocState >= 0
-				&& prStaRec->eAuthAssocState < AA_STATE_NUM) {
+		if (prStaRec->eAuthAssocState < AA_STATE_NUM) {
 			DBGLOG(SAA, LOUD,
 			"EVENT-ABORT: Previous Auth/Assoc State == %s.\n",
 			apucDebugAAState[prStaRec->eAuthAssocState]);

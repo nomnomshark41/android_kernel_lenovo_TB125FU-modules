@@ -84,7 +84,9 @@
 #define ROAMING_ONE_AP_SKIP_TIMES		3
 #endif
 
-/* #define ROAMING_NO_SWING_RCPI_STEP                  5 //rcpi */
+#define ROAMING_RECOVER_RLM_SYNC		0
+#define ROAMING_RECOVER_BSS_UPDATE		1
+
 /*******************************************************************************
  *                             D A T A   T Y P E S
  *******************************************************************************
@@ -114,6 +116,9 @@ enum ENUM_ROAMING_REASON {
 	ROAMING_REASON_BEACON_TIMEOUT,
 	ROAMING_REASON_INACTIVE,
 	ROAMING_REASON_SAA_FAIL,
+	ROAMING_REASON_UPPER_LAYER_TRIGGER,
+	ROAMING_REASON_BTM,
+	ROAMING_REASON_BTM_DISASSOC,
 	ROAMING_REASON_NUM
 };
 
@@ -151,10 +156,34 @@ enum ENUM_ROAMING_STATE {
 	ROAMING_STATE_IDLE = 0,
 	ROAMING_STATE_DECISION,
 	ROAMING_STATE_DISCOVERY,
-	ROAMING_STATE_REQ_CAND_LIST,
 	ROAMING_STATE_ROAM,
 	ROAMING_STATE_NUM
 };
+
+struct ROAMING_EVENT_INFO {
+	uint8_t ucStatus;
+	uint8_t aucPrevBssid[MAC_ADDR_LEN];
+	uint8_t aucCurrBssid[MAC_ADDR_LEN];
+	uint8_t ucPrevChannel;
+	uint8_t ucCurrChannel;
+	uint8_t ucPrevRcpi;
+	uint8_t ucCurrRcpi;
+	uint8_t ucBw;
+	uint16_t u2ApLoading;
+	uint8_t ucSupportStbc;
+};
+
+#if CFG_SUPPORT_802_11V_BTM_OFFLOAD
+struct ROAMING_SKIP_BTM {
+	uint8_t ucConsecutiveBtmCount;
+	OS_SYSTIME rFrstReqTime;
+};
+
+struct ROAMING_SKIP_PER {
+	uint8_t ucConsecutivePerCount;
+	OS_SYSTIME rFrstPerTime;
+};
+#endif
 
 struct ROAMING_INFO {
 	u_int8_t fgIsEnableRoaming;
@@ -167,11 +196,18 @@ struct ROAMING_INFO {
 #endif
 
 	u_int8_t fgDrvRoamingAllow;
-	struct TIMER rWaitCandidateTimer;
 	enum ENUM_ROAMING_REASON eReason;
 	uint8_t ucPER;
 	uint8_t ucRcpi;
 	uint8_t ucThreshold;
+	struct ROAMING_EVENT_INFO rEventInfo;
+#if CFG_SUPPORT_802_11V_BTM_OFFLOAD
+	struct ROAMING_SKIP_BTM rSkipBtmInfo;
+	struct ROAMING_SKIP_PER rSkipPerInfo;
+	uint8_t fgDisallowBtmRoaming;
+	uint8_t fgDisallowPERRoaming;
+#endif
+	uint8_t ucRecoverBitmap;
 };
 
 /*******************************************************************************
@@ -220,13 +256,23 @@ void roamingFsmRunEventRoam(IN struct ADAPTER *prAdapter,
 	IN uint8_t ucBssIndex);
 
 void roamingFsmRunEventFail(IN struct ADAPTER *prAdapter,
-	IN uint32_t u4Reason,
+	IN uint8_t ucReason,
 	IN uint8_t ucBssIndex);
 
 void roamingFsmRunEventAbort(IN struct ADAPTER *prAdapter,
 	IN uint8_t ucBssIndex);
 
+void roamingFsmNotifyEvent(IN struct ADAPTER *adapter, IN uint8_t bssIndex,
+	IN uint8_t ucFail, IN struct BSS_DESC *prBssDesc);
+
 uint32_t roamingFsmProcessEvent(IN struct ADAPTER *prAdapter,
 	IN struct CMD_ROAMING_TRANSIT *prTransit);
+
+void roamingFsmSetRecoverBitmap(struct ADAPTER *prAdapter,
+	uint8_t ucBssIndex, uint8_t ucScenario);
+
+void roamingFsmDoRecover(struct ADAPTER *prAdapter, uint8_t ucBssIndex);
+
+uint8_t roamingFsmInDecision(struct ADAPTER *prAdapter, uint8_t ucBssIndex);
 
 #endif /* _ROAMING_FSM_H */
