@@ -466,7 +466,8 @@ ifneq ($(WLAN_CHIP_ID),)
 PLAT_DIR    := os/$(os)/plat/mt$(WLAN_CHIP_ID)/
 endif
 SYSDVT_DIR  := dvt/
-
+cflags-y += -I$(src)/os -I$(src)/os/$(os)/include
+ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 # ---------------------------------------------------
 # Objects List
 # ---------------------------------------------------
