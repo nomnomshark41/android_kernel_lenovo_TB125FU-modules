@@ -66,6 +66,10 @@ ifeq ($(ADAPTOR_OPTS),CONNAC2X2_SOC3_0)
 $(MODULE_NAME)-objs += wifi_pwr_on.o
 endif
 all:
-	make -C $(KERNEL_SRC) M=$(PWD) modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
 clean:
-	make -C $(KERNEL_SRC) M=$(PWD) clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
