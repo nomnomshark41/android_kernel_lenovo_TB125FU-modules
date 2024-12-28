@@ -207,36 +207,36 @@ endif
 all: driver
 
 driver:
-	+cd $(DRIVER_DIR) && make -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) PLATFORM_FLAGS="$(PLATFORM_FLAGS)" modules
+    +cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) PLATFORM_FLAGS="$(PLATFORM_FLAGS)" modules
 ifeq ($(PLATFORM),MT53XX)
 ifeq ($(DRIVER_PARTIAL_BUILD), y)
-	@cd $(DRIVER_DIR) && $(CROSS_COMPILE)strip --strip-unneeded $(MODULE_NAME).ko
+    @cd $(DRIVER_DIR) && $(CROSS_COMPILE)strip --strip-unneeded $(MODULE_NAME).ko
 else
 ifneq ($(ANDROID),true)
-	if [ ! -d $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET) ]; then \
-		mkdir -p $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET)/; \
-	fi
-	cp -f $(OUT_STA_KO) $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET)/$(MODULE_NAME).ko
+    if [ ! -d $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET) ]; then \
+        mkdir -p $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET)/; \
+    fi
+    cp -f $(OUT_STA_KO) $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET)/$(MODULE_NAME).ko
 else
 ifeq "$(BUILD_CFG)" "debug"
-	echo "ANDROID_VERSION=$(ANDROID_VERSION)"
-	if [ ! -d $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/dbg ]; then \
-		mkdir -p $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/dbg; \
-	fi
-	cp -f $(OUT_STA_KO) $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/dbg/$(MODULE_NAME).ko
+    echo "ANDROID_VERSION=$(ANDROID_VERSION)"
+    if [ ! -d $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/dbg ]; then \
+        mkdir -p $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/dbg; \
+    fi
+    cp -f $(OUT_STA_KO) $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/dbg/$(MODULE_NAME).ko
 
-	if [ -d $(OUTPUT_ROOT)/basic/modules ]; then \
-		cp -f $(OUT_STA_KO) $(OUTPUT_ROOT)/basic/modules/wlan.ko; \
-	fi
+    if [ -d $(OUTPUT_ROOT)/basic/modules ]; then \
+        cp -f $(OUT_STA_KO) $(OUTPUT_ROOT)/basic/modules/wlan.ko; \
+    fi
 else
-	if [ ! -d $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING) ]; then \
-		mkdir -p $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING); \
-	fi
-	cp -f $(OUT_STA_KO) $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/$(MODULE_NAME).ko
+    if [ ! -d $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING) ]; then \
+        mkdir -p $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING); \
+    fi
+    cp -f $(OUT_STA_KO) $(LINUX_ROOT)/../android/$(ANDROID_VERSION)/vendor/mediatek/open/hardware/prebuilt/wifi/$(ANDROID_IC_SETTING)/$(MODULE_NAME).ko
 
-	if [ -d $(OUTPUT_ROOT)/basic/modules ]; then \
-		cp -f $(OUT_STA_KO) $(OUTPUT_ROOT)/basic/modules/wlan.ko; \
-	fi
+    if [ -d $(OUTPUT_ROOT)/basic/modules ]; then \
+        cp -f $(OUT_STA_KO) $(OUTPUT_ROOT)/basic/modules/wlan.ko; \
+    fi
 endif
 endif
 endif
@@ -244,7 +244,7 @@ endif
 #	@cd $(DRIVER_DIR) && cp $(MODULES_NAME)_$(HIF).ko $(MODULES_NAME).ko
 
 #common:
-#	+cd $(COMMON_DIR) && make -C $(LINUX_SRC) M=$(COMMON_DIR) modules
+#	+cd $(COMMON_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(COMMON_DIR) modules
 #	@cat $(COMMON_DIR)/Module.symvers >> $(LINUX_SRC)/Module.symvers
 
 clean: driver_clean
@@ -253,11 +253,11 @@ clean: driver_clean
 #	@cp $(LINUX_SRC)/Module.symvers.original $(LINUX_SRC)/Module.symvers
 
 driver_clean:
-	cd $(DRIVER_DIR) && make -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) clean
-	if [ -e $(DRIVER_DIR)/$(MODULE_NAME).ko ]; then rm $(DRIVER_DIR)/$(MODULE_NAME).ko; fi;
+    cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) clean
+    if [ -e $(DRIVER_DIR)/$(MODULE_NAME).ko ]; then rm $(DRIVER_DIR)/$(MODULE_NAME).ko; fi;
 
 #common_clean:
-#	cd $(COMMON_DIR) && make -C $(LINUX_SRC) M=$(COMMON_DIR) clean
+#	cd $(COMMON_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(COMMON_DIR) clean
 
 .PHONY: all clean driver driver_clean
 
