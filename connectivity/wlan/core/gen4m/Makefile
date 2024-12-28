@@ -253,7 +253,7 @@ clean: driver_clean
 #	@cp $(LINUX_SRC)/Module.symvers.original $(LINUX_SRC)/Module.symvers
 
 driver_clean:
-    cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) clean
+	cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) clean
     if [ -e $(DRIVER_DIR)/$(MODULE_NAME).ko ]; then rm $(DRIVER_DIR)/$(MODULE_NAME).ko; fi;
 
 #common_clean:
