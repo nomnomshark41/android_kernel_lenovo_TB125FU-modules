@@ -19,7 +19,7 @@ ifeq ($(HIF),)
 endif
 
 export CONFIG_MTK_COMBO_WIFI_HIF=$(HIF)
-MODULE_NAME := wlan_$(WIFI_TARGET)_$(HIF)
+MODULE_NAME := wlan_drv_gen4m 
 
 
 ##############################################################
@@ -200,6 +200,7 @@ ifneq ($(CFG_SDIO_RX_AGG_TASKLET),)
 PLATFORM_FLAGS += -DCFG_SDIO_RX_AGG_TASKLET=$(CFG_SDIO_RX_AGG_TASKLET)
 endif
 
+obj-m += wlan_drv_gen4m.o
 ##############################################################
 # Compile settings
 ##############################################################
