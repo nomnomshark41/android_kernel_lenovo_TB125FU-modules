@@ -21,7 +21,7 @@
 #define _OSAL_H_
 
 #include "osal_typedef.h"
-#include "../../debug_utility/ring.h"
+#include "ring.h"
 #include <linux/workqueue.h>
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
