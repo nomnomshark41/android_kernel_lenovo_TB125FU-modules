@@ -441,6 +441,8 @@ endif
 # ---------------------------------------------------
 # Directory List
 # ---------------------------------------------------
+cflags-y += -I$(src)/os -I$(src)/os/$(os)/include
+ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 COMMON_DIR  := common/
 OS_DIR      := os/$(os)/
 HIF_COMMON_DIR := $(OS_DIR)hif/common/
@@ -466,8 +468,7 @@ ifneq ($(WLAN_CHIP_ID),)
 PLAT_DIR    := os/$(os)/plat/mt$(WLAN_CHIP_ID)/
 endif
 SYSDVT_DIR  := dvt/
-cflags-y += -I$(src)/os -I$(src)/os/$(os)/include
-ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
+
 # ---------------------------------------------------
 # Objects List
 # ---------------------------------------------------
