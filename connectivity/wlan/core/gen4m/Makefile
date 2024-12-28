@@ -52,6 +52,10 @@ ifeq ($(MTK_COMBO_CHIP),)
 MTK_COMBO_CHIP = MT6632
 endif
 
+ifeq ($(WLAN_CHIP_ID),)
+WLAN_CHIP_ID=$(word 1, $(MTK_COMBO_CHIP))
+endif
+
 $(info $$MTK_PLATFORM is [${MTK_PLATFORM}])
 $(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
 $(info $$MTK_COMBO_CHIP is [${MTK_COMBO_CHIP}])
@@ -68,16 +72,12 @@ ifneq ($(CONFIG_MEDIATEK_EMI),)
 ccflags-y += -DCONFIG_WLAN_MTK_EMI=1
 endif
 
-ifeq ($(WLAN_CHIP_ID),)
-WLAN_CHIP_ID=$(word 1, $(MTK_COMBO_CHIP))
-endif
 
 ccflags-y += -DCFG_SUPPORT_DEBUG_FS=0
 ccflags-y += -DWLAN_INCLUDE_PROC
 ccflags-y += -DCFG_SUPPORT_AGPS_ASSIST=0
 ccflags-y += -DCFG_SUPPORT_TSF_USING_BOOTTIME=1
 ccflags-y += -DARP_MONITER_ENABLE=1
-ccflags-y += -Werror $(call cc-disable-warning, unused-but-set-variable)
 #ccflags-y:=$(filter-out -U$(WLAN_CHIP_ID),$(ccflags-y))
 #ccflags-y += -DLINUX -D$(WLAN_CHIP_ID)
 #workaround: also needed for none LINUX system
