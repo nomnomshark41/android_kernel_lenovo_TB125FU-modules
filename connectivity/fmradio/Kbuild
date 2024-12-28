@@ -70,6 +70,9 @@ ifeq ($(CFG_FM_CHIP),)
     FM_CHIP := mt6631
 
     ccflags-y += -I$(KO_CODE_PATH)/chips/mt6631/inc
+    ccflags-y += -I$(TOP)/common/common_main/include
+    ccflags-y += -I$(TOP)/common/common_main/linux/include
+    ccflags-y += -I$(TOP)/common/common_main/platform/include
 
     $(FM_CHIP)-objs += chips/mt6631/pub/mt6631_fm_rds.o
     $(FM_CHIP)-objs += chips/mt6631/pub/mt6631_fm_lib.o
