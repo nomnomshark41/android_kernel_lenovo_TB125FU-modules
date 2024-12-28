@@ -64,6 +64,7 @@ ifeq ($(MTK_CHIP_IF), sdio)
     ccflags-y += -DCHIP_IF_SDIO
     ccflags-y += -DSDIO_DEBUG=0
     ccflags-y += -I$(src)/include/sdio
+    ccflags-y += -I$(src)/include/ -I$(KERNEL_SRC)/include/ -I$(KERNEL_SRC)/drivers/bluetooth
 else ifeq ($(MTK_CHIP_IF), usb)
     MOD_NAME = btmtk_usb_unify
     CFILES := usb/btmtkusb.c btmtk_woble.c btmtk_chip_reset.c
