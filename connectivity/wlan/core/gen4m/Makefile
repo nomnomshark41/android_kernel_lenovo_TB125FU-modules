@@ -441,7 +441,7 @@ endif
 # ---------------------------------------------------
 # Directory List
 # ---------------------------------------------------
-cflags-y += -I$(src)/os -I$(src)/os/$(os)/include
+ccflags-y += -I$(src)/os -I$(src)/os/$(os)/include
 ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 COMMON_DIR  := common/
 OS_DIR      := os/$(os)/
