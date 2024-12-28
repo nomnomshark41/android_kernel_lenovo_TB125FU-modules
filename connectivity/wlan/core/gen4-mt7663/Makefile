@@ -575,3 +575,11 @@ ccflags-y += -DCFG_SDIO_RX_AGG_WORKQUE=0
 
 #Support mobile private cmd, need change cmd size to 512
 ccflags-y += -DCFG_ALPS_ANDROID_AOSP_PRIV_CMD
+all:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
+
+modules_install:
+	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
+clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
