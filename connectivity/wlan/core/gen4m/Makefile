@@ -207,7 +207,7 @@ endif
 all: driver
 
 driver:
-    +cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) PLATFORM_FLAGS="$(PLATFORM_FLAGS)" modules
+	cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) PLATFORM_FLAGS="$(PLATFORM_FLAGS)" modules
 ifeq ($(PLATFORM),MT53XX)
 ifeq ($(DRIVER_PARTIAL_BUILD), y)
     @cd $(DRIVER_DIR) && $(CROSS_COMPILE)strip --strip-unneeded $(MODULE_NAME).ko
