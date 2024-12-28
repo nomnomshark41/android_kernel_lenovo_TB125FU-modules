@@ -24,7 +24,7 @@ ccflags-y += $(WLAN_CHIP_LIST)
 ##############################################################
 # Common settings
 ##############################################################
-export MTK_COMBO_CHIP=MT7663
+export MTK_COMBO_CHIP=MT6632
 export CONFIG_MTK_COMBO_WIFI=m
 export HIF=sdio
 export CONFIG_MTK_COMBO_COMM_SDIO=y
@@ -38,7 +38,7 @@ $(info $$MTK_PLATFORM is [${MTK_PLATFORM}])
 $(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
 
 ifeq ($(WLAN_CHIP_ID),)
-    WLAN_CHIP_ID := MT7663
+    WLAN_CHIP_ID := MT6632
 endif
 
 ccflags-y += -DCFG_SUPPORT_DEBUG_FS=0
