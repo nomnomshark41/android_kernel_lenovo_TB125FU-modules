@@ -1,6 +1,4 @@
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
-ccflags-y += -I$(src)/os -I$(src)/os/$(os)/include
-ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 # ---------------------------------------------------
 # OS option
 # ---------------------------------------------------
@@ -373,8 +371,6 @@ ifeq ($(MODULE_NAME),)
 endif
 
 ccflags-y += -DDBG=0
-ccflags-y += -I$(src)/os -I$(src)/os/$(os)/include
-ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 ifeq ($(CFG_SUPPORT_WIFI_SYSDVT), 1)
 ccflags-y += -I$(src)/include/dvt
 endif
@@ -443,8 +439,6 @@ endif
 # ---------------------------------------------------
 # Directory List
 # ---------------------------------------------------
-ccflags-y += -I$(src)/os -I$(src)/os/$(os)/include
-ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 COMMON_DIR  := common/
 OS_DIR      := os/$(os)/
 HIF_COMMON_DIR := $(OS_DIR)hif/common/
