@@ -329,7 +329,7 @@ endif
 ifneq ($(PLATFORM_FLAGS), )
     ccflags-y += $(PLATFORM_FLAGS)
 endif
-
+ccflags-y += -I$(src)/connectivity/wlan/core/gen4-mt7663/include
 #ifeq ($(CONFIG_MTK_WIFI_ONLY),$(filter $(CONFIG_MTK_WIFI_ONLY),m y))
 #obj-$(CONFIG_MTK_WIFI_ONLY) += $(MODULE_NAME).o
 #else
