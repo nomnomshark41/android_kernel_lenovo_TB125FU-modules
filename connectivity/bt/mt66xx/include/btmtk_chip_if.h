@@ -7,7 +7,7 @@
 #define __BTMTK_CHIP_IF_H__
 
 #ifdef CHIP_IF_USB
-#include "btmtk_usb.h"
+#include "usb/btmtk_usb.h"
 #elif defined(CHIP_IF_SDIO)
 #include "btmtk_sdio.h"
 #elif defined(CHIP_IF_UART)
