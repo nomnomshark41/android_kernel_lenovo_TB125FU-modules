@@ -52,12 +52,12 @@ export KERNEL_64BIT=true
 export TOOL_CHAIN_64BIT=4.9.3
 endif
 #
-LINUX_SRC=$(LINUX_ROOT)/../android/$(SYSBUILD_NAME)/out/mediatek_linux/output/$(RELEASE_NAME)/rel/obj/kernel/linux_core/kernel/linux-$(KERNEL_VER)/$(KERNEL_CONFIG)_modules
+KERNEL_SRC=$(LINUX_ROOT)/../android/$(SYSBUILD_NAME)/out/mediatek_linux/output/$(RELEASE_NAME)/rel/obj/kernel/linux_core/kernel/linux-$(KERNEL_VER)/$(KERNEL_CONFIG)_modules
 OBJ_ROOT ?= $(LINUX_ROOT)/../android/$(SYSBUILD_NAME)/out/mediatek_linux/output/$(RELEASE_NAME)/rel/obj
-export KERNEL_OBJ_ROOT=$(LINUX_SRC)/../..
+export KERNEL_OBJ_ROOT=$(KERNEL_SRC)/../..
 else
 # *****For system auto build*****
-LINUX_SRC=$(KERNEL_OBJ_ROOT)/$(KERNEL_VER)/$(KERNEL_CONFIG)_modules
+KERNEL_SRC=$(KERNEL_OBJ_ROOT)/$(KERNEL_VER)/$(KERNEL_CONFIG)_modules
 # 	overwrite $(OUT_STA_KO) for MT53XX platform
 OUT_STA_KO = $(OBJ_ROOT)/third_party/source/wlan/mtk/$(WIFI_TARGET)/$(MODULE_NAME).ko
 endif
@@ -70,11 +70,11 @@ ifeq "$(CC)" "gcc"
 CC ?= $(CROSS_COMPILE)gcc
 endif
 $(warning =============================================)
-$(warning wifi driver LINUX_SRC=$(LINUX_SRC))
+$(warning wifi driver KERNEL_SRC=$(KERNEL_SRC))
 $(warning CROSS_COMPILE=$(CROSS_COMPILE))
 $(warning =============================================)
 
-DRIVER_DIR=$(LINUX_ROOT)/third_party/source/wlan/mtk/$(WIFI_TARGET)
+M=$(LINUX_ROOT)/third_party/source/wlan/mtk/$(WIFI_TARGET)
 
 endif
 #- - - - -- - - - - - - - - -
@@ -204,13 +204,18 @@ endif
 # Compile settings
 ##############################################################
 
-all: driver
+all:
+    $(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
 
-driver:
-	cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) PLATFORM_FLAGS="$(PLATFORM_FLAGS)" modules
+modules_install:
+    $(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+
+clean:
+    $(MAKE) -C $(KERNEL_SRC) M=$(M) clean
+
 ifeq ($(PLATFORM),MT53XX)
 ifeq ($(DRIVER_PARTIAL_BUILD), y)
-    @cd $(DRIVER_DIR) && $(CROSS_COMPILE)strip --strip-unneeded $(MODULE_NAME).ko
+    @cd $(M) && $(CROSS_COMPILE)strip --strip-unneeded $(MODULE_NAME).ko
 else
 ifneq ($(ANDROID),true)
     if [ ! -d $(THIRDPARTY_LIB_ROOT)/wlan/$(KERNEL_VER_FOR_3RD)/mtk/$(WIFI_TARGET) ]; then \
@@ -241,23 +246,11 @@ endif
 endif
 endif
 endif
-#	@cd $(DRIVER_DIR) && cp $(MODULES_NAME)_$(HIF).ko $(MODULES_NAME).ko
+#	@cd $(M) && cp $(MODULES_NAME)_$(HIF).ko $(MODULES_NAME).ko
 
 #common:
-#	+cd $(COMMON_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(COMMON_DIR) modules
-#	@cat $(COMMON_DIR)/Module.symvers >> $(LINUX_SRC)/Module.symvers
+#	+cd $(COMMON_DIR) && $(MAKE) -C $(KERNEL_SRC) M=$(COMMON_DIR) modules
+#	@cat $(COMMON_DIR)/Module.symvers >> $(KERNEL_SRC)/Module.symvers
 
-clean: driver_clean
-
-#symvers_clean: driver_clean
-#	@cp $(LINUX_SRC)/Module.symvers.original $(LINUX_SRC)/Module.symvers
-
-driver_clean:
-	cd $(DRIVER_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(DRIVER_DIR) MODULE_NAME=$(MODULE_NAME) clean
-	if [ -e $(DRIVER_DIR)/$(MODULE_NAME).ko ]; then rm $(DRIVER_DIR)/$(MODULE_NAME).ko; fi;
-
-#common_clean:
-#	cd $(COMMON_DIR) && $(MAKE) -C $(LINUX_SRC) M=$(COMMON_DIR) clean
-
-.PHONY: all clean driver driver_clean
+.PHONY: all clean modules_install
 
