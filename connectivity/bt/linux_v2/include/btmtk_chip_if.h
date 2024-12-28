@@ -8,7 +8,7 @@
 #ifdef CHIP_IF_USB
 #include "btmtk_usb.h"
 #elif defined(CHIP_IF_SDIO)
-#include "btmtk_sdio.h"
+#include "sdio/btmtk_sdio.h"
 #elif defined(CHIP_IF_UART)
 #include "btmtk_uart.h"
 #elif defined(CHIP_IF_BTIF)
