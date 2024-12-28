@@ -1,6 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(MTK_WLAN_SUPPORT), yes)
+ifeq ($(MTK_WLAN_SUPPORT),)
 
 ifeq ($(WLAN_BUILD_COMMON),)
 	WIFI_NAME := wlan_drv_gen4m
