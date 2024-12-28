@@ -1,4 +1,6 @@
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+ccflags-y += -I$(src)/os -I$(src)/os/$(os)/include
+ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt -I$(src)/include/chips
 # ---------------------------------------------------
 # OS option
 # ---------------------------------------------------
