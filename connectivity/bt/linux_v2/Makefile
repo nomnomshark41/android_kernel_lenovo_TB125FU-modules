@@ -110,9 +110,9 @@ endif
 ###############################################################################
 #obj-m := $(UART_MOD_NAME).o
 all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
 clean:
-	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
 # Check coding style
 # export IGNORE_CODING_STYLE_RULES := NEW_TYPEDEFS,LEADING_SPACE,CODE_INDENT,SUSPECT_CODE_INDENT
 ccs:
