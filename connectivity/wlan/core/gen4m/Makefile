@@ -1,4 +1,6 @@
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+ccflags-y += -I$(src)/connectivity/wlan/core/gen4m/include
+ccflags-y += -I$(src)/connectivity/wlan/core/gen4m/os/linux/include
 # ---------------------------------------------------
 # OS option
 # ---------------------------------------------------
