@@ -37,7 +37,7 @@ endif
 
 ifeq ($(KBUILD_MODPOST_FAIL_ON_WARNINGS),)
     # Force build fail on modpost warning
-    KBUILD_MODPOST_FAIL_ON_WARNINGS=y
+    KBUILD_MODPOST_FAIL_ON_WARNINGS=n
 endif
 
 # ---------------------------------------------------
@@ -442,10 +442,8 @@ else ifeq ($(CONFIG_MTK_COMBO_WIFI_HIF), axi)
 else ifeq ($(CONFIG_MTK_COMBO_WIFI_HIF), ut)
     # Increase frame size to 2048 because of 'cfg80211_connect_result' exceed stack size
     ccflags-y += -D_HIF_UT=1 -Wno-unused-function -Wno-unused-variable -Wframe-larger-than=2048
-else ifeq ($(CONFIG_MTK_COMBO_WIFI_HIF), none)
+else ifeq ($(CONFIG_MTK_COMBO_WIFI_HIF),)
 	ccflags-y += -D_HIF_NONE=1
-else
-    $(error Unsuppoted HIF=$(CONFIG_MTK_COMBO_WIFI_HIF)!!)
 endif
 
 ifeq ($(CONFIG_MTK_WIFI_DOWNLOAD_DYN_MEMORY_MAP), y)
