@@ -1,3 +1,0 @@
-# load btmtksdio
-on boot
-  insmod /vendor/lib/modules/btmtk_usb_unify.ko
