@@ -1,4 +1,3 @@
-export KERNEL_SRC := /lib/modules/$(shell uname -r)/build
 #################### Configurations ####################
 # Compile Options for bt driver configuration.
 CONFIG_SUPPORT_BT_DL_WIFI_PATCH=y
