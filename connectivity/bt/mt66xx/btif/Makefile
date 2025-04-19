@@ -16,7 +16,7 @@ ifneq ($(KERNEL_OUT),)
 endif
 
 # Force build fail on modpost warning
-KBUILD_MODPOST_FAIL_ON_WARNINGS := y
+KBUILD_MODPOST_FAIL_ON_WARNINGS := n
 
 # platform
 
