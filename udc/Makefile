@@ -29,10 +29,10 @@ ccflags-y += \
 	-I$(srctree)/drivers/misc/mediatek/eccci/udc/udc_lib_inc
 
 all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
+	$(MAKE) CC=$(CC) -C $(KERNEL_SRC) M=$(PWD) modules $(KBUILD_OPTIONS)
 
 modules_install:
-	$(MAKE) M=$(M) -C $(KERNEL_SRC) modules_install
+	$(MAKE) M=$(PWD) -C $(KERNEL_SRC) modules_install
 
 clean:
-	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) clean
