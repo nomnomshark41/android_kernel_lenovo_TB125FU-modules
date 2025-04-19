@@ -261,8 +261,10 @@ static int btmtk_pm_notifier_callback(struct notifier_block *nb,
 
 	switch (event) {
 		case PM_SUSPEND_PREPARE:
-			BTMTK_INFO("%s: bt_state[%d], event[%ld]",
-					__func__, cif_dev->bt_state, event);
+			if(cif_dev->bt_state != FUNC_ON) {
+				BTMTK_INFO("%s: bt_state[%d], event[%ld]",
+						__func__, cif_dev->bt_state, event);
+			}
 		case PM_POST_SUSPEND:
 			if(cif_dev->bt_state == FUNC_ON) {
 				bt_dump_bgfsys_suspend_wakeup_debug();
@@ -1484,7 +1486,8 @@ int btmtk_btif_event_filter(struct btmtk_dev *bdev, struct sk_buff *skb)
 			return 1; // this event is filtered
 		} else {
 			// may be normal packet, continue put skb to rx queue
-			BTMTK_INFO("%s: may be normal packet!", __func__);
+			BTMTK_WARN("%s: may be normal packet!", __func__);
+			btmtk_cif_dump_rxd_backtrace();
 		}
 	}
 
@@ -1576,7 +1579,9 @@ static int btmtk_cif_probe(struct platform_device *pdev)
 	/* 8. Register screen on/off & suspend/wakup notify callback */
 	cif_dev->blank_state = WMT_PARA_SCREEN_ON;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
-	mtk_disp_notifier_register("btmtk_disp_notifier", &btmtk_disp_notifier);
+	if (mtk_disp_notifier_register("btmtk_disp_notifier", &btmtk_disp_notifier)) {
+		BTMTK_ERR("Register mtk_disp_notifier failed\n");
+	}
 #else
 	btmtk_fb_notify_register();
 #endif

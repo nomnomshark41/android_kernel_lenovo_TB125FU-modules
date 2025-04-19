@@ -1,3 +1,4 @@
+export KERNEL_SRC := /lib/modules/$(shell uname -r)/build
 #################### Configurations ####################
 # Compile Options for bt driver configuration.
 CONFIG_SUPPORT_BT_DL_WIFI_PATCH=y
@@ -83,9 +84,9 @@ obj-m += $(MOD_NAME).o
 ###############################################################################
 #obj-m := $(UART_MOD_NAME).o
 all:
-	make CC=$(CC) -C $(KERNEL_SRC)  M=$(PWD) modules
+	make -C $(KERNEL_SRC) M=$(PWD) modules
 clean:
-	make CC=$(CC) -C $(KERNEL_SRC) M=$(PWD) clean
+	make -C $(KERNEL_SRC) M=$(PWD) clean
 # Check coding style
 # export IGNORE_CODING_STYLE_RULES := NEW_TYPEDEFS,LEADING_SPACE,CODE_INDENT,SUSPECT_CODE_INDENT
 ccs:
