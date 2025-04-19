@@ -39,7 +39,7 @@ endif
 
 #################### Configurations ####################
 # For chip interface, driver supports "usb", "sdio", "uart" and "btif"
-MTK_CHIP_IF := btif
+MTK_CHIP_IF := usb
 
 ifeq ($(MTK_CHIP_IF), sdio)
     MOD_NAME = btmtk_sdio_unify
