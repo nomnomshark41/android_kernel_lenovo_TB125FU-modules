@@ -83,9 +83,9 @@ obj-m += $(MOD_NAME).o
 ###############################################################################
 #obj-m := $(UART_MOD_NAME).o
 all:
-	make -C $(KERNEL_SRC) M=$(M) modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules
 clean:
-	make -C $(KERNEL_SRC) M=$(M) clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
 # Check coding style
 # export IGNORE_CODING_STYLE_RULES := NEW_TYPEDEFS,LEADING_SPACE,CODE_INDENT,SUSPECT_CODE_INDENT
 ccs:
