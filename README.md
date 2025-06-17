@@ -1,4 +1,4 @@
-# Android kernel module tree for Lenovo Tab M10 Plus 3rd gen (TB125FU) WIP
+# Android Kernel module Tree for Lenovo Tab M10 Plus 3rd gen (TB125FU) WIP
 
 ```
 #
