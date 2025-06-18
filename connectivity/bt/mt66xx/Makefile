@@ -67,7 +67,6 @@ endif
 CFILES += btmtk_main.c btmtk_fw_log.c
 
 ccflags-y += -I$(src)/include/ -I$(src)/
-ccflags-y += -I$(src)/mt66xx/include
 $(info SRC = $(src))
 
 $(MOD_NAME)-objs := $(CFILES:.c=.o)
