@@ -7,7 +7,7 @@
 ifneq ($(KERNEL_OUT),)
     ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
 endif
-
+$(info srctree = [$(srctree)])
 ifndef TOP
     TOP := $(srctree)
 endif
