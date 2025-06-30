@@ -7,10 +7,12 @@
 ifneq ($(KERNEL_OUT),)
     ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
 endif
-$(info srctree = [$(srctree)])
+
 ifndef TOP
     TOP := $(srctree)
 endif
+
+ccflags-y += -I$(srctree)/../../common/common_main/include
 
 #ifneq ($(CFG_BT_PM_QOS_CONTROL),)
 #    ccflags-y += -D PM_QOS_CONTROL=1
