@@ -12,7 +12,9 @@ ifndef TOP
     TOP := $(srctree)/..
 endif
 
-EXTRA_CFLAGS += -I$(abspath $(M)/../../../common/common_main/include)
+EXTRA_CFLAGS += \
+  -I$(abspath $(M)/../../../common/common_main/include) \
+  -I$(abspath $(M)/../../../common/common_main/linux/include)
 
 #ifneq ($(CFG_BT_PM_QOS_CONTROL),)
 #    ccflags-y += -D PM_QOS_CONTROL=1
