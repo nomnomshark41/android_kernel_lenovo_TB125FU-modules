@@ -12,11 +12,6 @@ ifndef TOP
     TOP := $(srctree)/..
 endif
 
-EXTRA_CFLAGS += \
-  -I$(M)/../../../common/common_main/include \
-  -I$(M)/../../../common/common_main/linux/include \
-  -I$(M)/../../../common/debug_utility
-
 #ifneq ($(CFG_BT_PM_QOS_CONTROL),)
 #    ccflags-y += -D PM_QOS_CONTROL=1
 #else
