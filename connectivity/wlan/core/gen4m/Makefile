@@ -1,7 +1,3 @@
-ccflags-y :=
-ifeq ($(CONFIG_MTK_PLATFORM),)
-CONFIG_MTK_PLATFORM := mt$(WLAN_CHIP_ID)
-endif
 MTK_PLATFORM := $(subst $(quote),,$(CONFIG_MTK_PLATFORM))
 
 # ---------------------------------------------------
