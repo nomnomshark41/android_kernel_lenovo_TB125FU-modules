@@ -12,7 +12,7 @@ ifndef TOP
     TOP := $(srctree)/..
 endif
 
-$(info USING HEADER PATH = $(abspath $(M)/../../common/common_main/include))
+EXTRA_CFLAGS += -I$(abspath $(M)/../../../common/common_main/include)
 
 #ifneq ($(CFG_BT_PM_QOS_CONTROL),)
 #    ccflags-y += -D PM_QOS_CONTROL=1
