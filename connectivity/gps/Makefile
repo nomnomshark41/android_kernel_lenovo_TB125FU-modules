@@ -24,7 +24,7 @@ ifneq ($(KERNEL_OUT),)
 endif
 
 ifndef TOP
-    TOP := $(srctree)/..
+    TOP :=  $(abspath $(src)/..)
 endif
 ldflags-y += -s
 
