@@ -12,7 +12,7 @@ ifneq ($(KERNEL_OUT),)
 endif
 
 ifndef TOP
-    TOP := $(abspath $(src)/../..)
+    TOP := $(abspath $(src)/..)
 endif
 
 # Force build fail on modpost warning
