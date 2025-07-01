@@ -9,7 +9,7 @@ ifneq ($(KERNEL_OUT),)
 endif
 
 ifndef TOP
-    TOP := $(abspath $(src)/../../)
+    TOP := $(srctree)/../..
 endif
 
 #ifneq ($(CFG_BT_PM_QOS_CONTROL),)
