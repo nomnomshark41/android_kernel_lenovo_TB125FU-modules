@@ -9,7 +9,7 @@ ifneq ($(KERNEL_OUT),)
 endif
 
 ifndef TOP
-    TOP := $(srctree)
+    TOP := $(srctree)/..
 endif
 
 $(info USING HEADER PATH = $(abspath $(M)/../../common/common_main/include))
