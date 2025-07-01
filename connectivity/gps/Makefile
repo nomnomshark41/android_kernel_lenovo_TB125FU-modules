@@ -208,7 +208,7 @@ ccflags-y += -DGPS_DL_HAS_MOCK=1
 endif
 
 else #Legacy drivers
-WMT_SRC_FOLDER := $(srctree)/drivers/misc/mediatek/connectivity/common
+WMT_SRC_FOLDER := $(TOP)/common
 
 ifeq ($(CONFIG_MTK_COMBO_CHIP),)
 ifneq ($(filter "y",$(CONFIG_MTK_COMBO_CHIP_MT6620) $(CONFIG_MTK_COMBO_CHIP_MT6628) $(CONFIG_MTK_COMBO_CHIP_MT6630) $(CONFIG_MTK_COMBO_CHIP_MT6632) $(CONFIG_MTK_COMBO_CHIP_MT7668)),)
