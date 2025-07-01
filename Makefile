@@ -1,0 +1,13 @@
+obj-m += connectivity/bt/mt66xx/wmt/
+obj-m += connectivity/common/
+obj-m += connectivity/connfem/
+obj-m += connectivity/conninfra/
+obj-m += connectivity/fmradio/
+obj-m += connectivity/gps/
+obj-m += connectivity/wlan/core/gen4m/
+obj-m += connectivity/wlan/adaptor/
+obj-m += fpsgo_cus/
+obj-m += gpu/
+obj-m += met_drv/4.14/
+obj-m += met_drv_v2/
+obj-m += udc/
