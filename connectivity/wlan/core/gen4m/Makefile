@@ -49,10 +49,6 @@ ifeq ($(MTK_COMBO_CHIP),)
 MTK_COMBO_CHIP = MT6632
 endif
 
-ifeq ($(WLAN_CHIP_ID),)
-WLAN_CHIP_ID=$(word 1, $(MTK_COMBO_CHIP))
-endif
-
 $(info $$MTK_PLATFORM is [${MTK_PLATFORM}])
 $(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
 $(info $$MTK_COMBO_CHIP is [${MTK_COMBO_CHIP}])
