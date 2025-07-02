@@ -383,10 +383,6 @@ ifeq ($(CONFIG_MTK_COMBO_WIFI),y)
     ccflags-y += -DCFG_WPS_DISCONNECT=1
 endif
 
-ifeq ($(WLAN_CHIP_ID),MT6632)
-     CONFIG_MTK_COMBO_WIFI_HIF := axi
-endif
-
 ifeq ($(CONFIG_MTK_COMBO_WIFI_HIF), sdio)
     ccflags-y += -D_HIF_SDIO=1
 else ifeq ($(CONFIG_MTK_COMBO_WIFI_HIF), pcie)
